@@ -268,7 +268,7 @@
 				INFOPLIST_KEY_CFBundleDisplayName = Diane;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.lifestyle";
-				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Diane listens so she can write your pages. The recording is not kept. Only the words stay on this phone.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Diane listens so she can write your pages. The voice stays on this phone, with the words.";
 				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "Diane turns what you say into writing on this phone.";
 				INFOPLIST_KEY_NSUserNotificationsUsageDescription = "Diane taps you in the morning so you stay a minute before you go.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -309,7 +309,7 @@
 				INFOPLIST_KEY_CFBundleDisplayName = Diane;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.lifestyle";
-				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Diane listens so she can write your pages. The recording is not kept. Only the words stay on this phone.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Diane listens so she can write your pages. The voice stays on this phone, with the words.";
 				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "Diane turns what you say into writing on this phone.";
 				INFOPLIST_KEY_NSUserNotificationsUsageDescription = "Diane taps you in the morning so you stay a minute before you go.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;

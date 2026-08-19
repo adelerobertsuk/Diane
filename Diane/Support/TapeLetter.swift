@@ -156,6 +156,14 @@ struct MailLetterView: UIViewControllerRepresentable {
             mimeType: "application/pdf",
             fileName: "The pages.pdf"
         )
+        if let voice = tape.voiceURL, let data = try? Data(contentsOf: voice) {
+            let isM4A = voice.pathExtension.lowercased() == "m4a"
+            mail.addAttachmentData(
+                data,
+                mimeType: isM4A ? "audio/mp4" : "audio/x-caf",
+                fileName: isM4A ? "The tape.m4a" : "The tape.caf"
+            )
+        }
         return mail
     }
 

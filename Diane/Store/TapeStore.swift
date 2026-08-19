@@ -11,6 +11,9 @@ final class TapeStore {
     var weeklyLetters: [WeeklyLetter]
     var showWordsWhileTalking: Bool
     var clicksEnabled: Bool
+    var displayName: String
+    var aboutYou: String
+    var keepVoice: Bool
     var isSaving = false
 
     static func load() -> TapeStore {
@@ -34,6 +37,9 @@ final class TapeStore {
         }
         showWordsWhileTalking = data.showWordsWhileTalking
         clicksEnabled = data.clicksEnabled
+        displayName = data.displayName
+        aboutYou = data.aboutYou
+        keepVoice = data.keepVoice
         TapeSounds.shared.enabled = clicksEnabled
         if tapes != data.tapes || weeklyLetters != data.weeklyLetters {
             persist()
@@ -68,23 +74,34 @@ final class TapeStore {
         Calendar.current.dateInterval(of: .weekOfYear, for: .now)?.start ?? .now
     }
 
-    func saveTape(transcript: String, duration: TimeInterval) async {
+    func saveTape(transcript: String, duration: TimeInterval, voice: URL? = nil, written: Bool = false) async {
         let text = transcript.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !text.isEmpty else { return }
+        guard !text.isEmpty else {
+            TapeVault.forget(voice)
+            return
+        }
         isSaving = true
-        TapeSounds.shared.startTyping()
         let kind: TapeKind = hasMorningPagesToday ? .later : .morningPages
         let summary = await Summarizer.summarize(text, kind: kind)
-        let tape = Tape(kind: kind, transcript: text, summary: summary, durationSeconds: duration)
+        var tape = Tape(kind: kind, transcript: text, summary: summary, durationSeconds: duration, written: written)
+        if keepVoice, let voice {
+            let compact = await TapeVault.compact(voice)
+            tape.voiceFileName = TapeVault.keep(compact, as: tape.id)
+        } else {
+            TapeVault.forget(voice)
+        }
         tapes.insert(tape, at: 0)
         persist()
         await refreshWeeklyLetterIfNeeded()
         isSaving = false
-        TapeSounds.shared.stopTyping(ding: true)
+        if !written {
+            TapeSounds.shared.play(.save)
+        }
         Haptics.success()
     }
 
     func delete(_ tape: Tape) {
+        TapeVault.forget(tape.voiceFileName)
         tapes.removeAll { $0.id == tape.id }
         persist()
     }
@@ -105,7 +122,11 @@ final class TapeStore {
     func refreshWeeklyLetterIfNeeded() async {
         guard thisWeekMorningPages.count >= 3 else { return }
         if thisWeekLetter != nil { return }
-        guard let body = await Summarizer.weeklyLetter(from: thisWeekMorningPages, weekStart: weekStart) else { return }
+        guard let body = await Summarizer.weeklyLetter(
+            from: thisWeekMorningPages,
+            weekStart: weekStart,
+            about: aboutYou
+        ) else { return }
         weeklyLetters.removeAll { Calendar.current.isDate($0.weekStart, equalTo: weekStart, toGranularity: .day) }
         weeklyLetters.insert(WeeklyLetter(weekStart: weekStart, body: body), at: 0)
         persist()
@@ -125,6 +146,29 @@ final class TapeStore {
         }
     }
 
+    func setDisplayName(_ value: String) {
+        displayName = value
+        persist()
+    }
+
+    func setAboutYou(_ value: String) {
+        aboutYou = value
+        persist()
+    }
+
+    func setKeepVoice(_ on: Bool) {
+        keepVoice = on
+        persist()
+    }
+
+    var letterName: String {
+        displayName.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    func presentedLetter(_ letter: WeeklyLetter) -> String {
+        WeeklyLetterCopy.present(letter.body, name: letterName)
+    }
+
     private func persist() {
         Persistence.save(
             AppData(
@@ -135,7 +179,11 @@ final class TapeStore {
                 reminderMinute: reminderMinute,
                 weeklyLetters: weeklyLetters,
                 showWordsWhileTalking: showWordsWhileTalking,
-                clicksEnabled: clicksEnabled
+                clicksEnabled: clicksEnabled,
+                displayName: displayName,
+                aboutYou: aboutYou,
+                keepVoice: keepVoice,
+                skinVersion: 2
             )
         )
     }

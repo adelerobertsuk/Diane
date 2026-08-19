@@ -4,10 +4,11 @@ import MediaPlayer
 import Speech
 import UIKit
 
-/// Live dictation that does not save audio, does not stop on silence,
+/// Live dictation that writes the voice onto this phone, does not stop on silence,
 /// and does not die when the phone locks.
 @Observable
 final class SpeechListener {
+    var keepVoice = true
     var isListening = false
     var isPaused = false
     var liveTranscript = ""
@@ -49,8 +50,25 @@ final class SpeechListener {
     private var chunkID = UUID()
     private var pauseTotal: TimeInterval = 0
     private var pauseBegan: Date?
+    private var tapeFile: AVAudioFile?
+    private var tapeURL: URL?
+    private let tapeLock = NSLock()
 
     private let chunkLimit: TimeInterval = 40
+
+    /// Closed recording, ready to keep with the pages. Nil if nothing was captured.
+    func takeRecording() -> URL? {
+        closeTapeFile()
+        let url = tapeURL
+        tapeURL = nil
+        return url
+    }
+
+    func discardRecording() {
+        closeTapeFile()
+        TapeVault.forget(tapeURL)
+        tapeURL = nil
+    }
 
     func start() {
         guard !isListening else { return }
@@ -104,6 +122,7 @@ final class SpeechListener {
             return
         }
         commitLive()
+        closeTapeFile()
         teardown(playHaptic: true)
         onStopped?()
     }
@@ -127,6 +146,7 @@ final class SpeechListener {
 
     private func beginSession() {
         teardownAudioEngineOnly()
+        discardRecording()
 
         speechRecognizer = SFSpeechRecognizer(locale: Locale.autoupdatingCurrent)
             ?? SFSpeechRecognizer(locale: Locale(identifier: "en-GB"))
@@ -170,14 +190,15 @@ final class SpeechListener {
 
         audioEngine.prepare()
         do {
+            isListening = true
             try audioEngine.start()
         } catch {
+            isListening = false
             errorMessage = "Could not start listening."
             teardown(playHaptic: false)
             return
         }
 
-        isListening = true
         Haptics.medium()
     }
 
@@ -235,10 +256,10 @@ final class SpeechListener {
     private func installTapIfNeeded() {
         guard !tapInstalled else { return }
         let input = audioEngine.inputNode
-        let format = input.outputFormat(forBus: 0)
-        input.installTap(onBus: 0, bufferSize: 1024, format: format) { [weak self] buffer, _ in
+        input.installTap(onBus: 0, bufferSize: 1024, format: nil) { [weak self] buffer, _ in
             guard let self, self.isListening, !self.isPaused else { return }
             self.recognitionRequest?.append(buffer)
+            self.appendTape(buffer)
             let level = SpeechListener.rmsLevel(buffer: buffer)
             Task { @MainActor [weak self] in
                 guard let self, self.isRecording else { return }
@@ -246,6 +267,50 @@ final class SpeechListener {
             }
         }
         tapInstalled = true
+    }
+
+    private func appendTape(_ buffer: AVAudioPCMBuffer) {
+        guard keepVoice else { return }
+        tapeLock.lock()
+        defer { tapeLock.unlock() }
+        if tapeFile == nil {
+            openTapeFileLocked(format: buffer.format)
+        }
+        try? tapeFile?.write(from: buffer)
+    }
+
+    private func openTapeFileLocked(format: AVAudioFormat) {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("diane-\(UUID().uuidString).caf")
+        let rate = format.sampleRate > 0 ? format.sampleRate : 44_100
+        let channels = max(1, format.channelCount)
+        do {
+            let file = try AVAudioFile(
+                forWriting: url,
+                settings: [
+                    AVFormatIDKey: Int(kAudioFormatLinearPCM),
+                    AVSampleRateKey: rate,
+                    AVNumberOfChannelsKey: channels,
+                    AVLinearPCMBitDepthKey: 16,
+                    AVLinearPCMIsFloatKey: false,
+                    AVLinearPCMIsBigEndianKey: false,
+                    AVLinearPCMIsNonInterleaved: true
+                ],
+                commonFormat: format.commonFormat,
+                interleaved: format.isInterleaved
+            )
+            tapeFile = file
+            tapeURL = url
+        } catch {
+            tapeFile = nil
+            tapeURL = nil
+        }
+    }
+
+    private func closeTapeFile() {
+        tapeLock.lock()
+        tapeFile = nil
+        tapeLock.unlock()
     }
 
     private func startKeepAliveTone() {
@@ -301,7 +366,7 @@ final class SpeechListener {
             MPNowPlayingInfoPropertyPlaybackRate: isPaused ? 0.0 : 1.0,
             MPNowPlayingInfoPropertyIsLiveStream: true
         ]
-        if let image = UIImage(named: TapeSkin.cooper.imageName) {
+        if let image = UIImage(named: TapeSkin.diane.imageName) {
             info[MPMediaItemPropertyArtwork] = MPMediaItemArtwork(boundsSize: image.size) { _ in image }
         }
         MPNowPlayingInfoCenter.default().nowPlayingInfo = info
@@ -408,7 +473,7 @@ final class SpeechListener {
     }
 
     /// A one-second silent WAV so iOS treats Diane as a living audio app
-    /// on the lock screen, without storing anyone's voice.
+    /// on the lock screen. The real voice is written to the tape file separately.
     private static func silenceWAV() -> Data {
         let sampleRate: UInt32 = 8000
         let samples: UInt32 = 8000

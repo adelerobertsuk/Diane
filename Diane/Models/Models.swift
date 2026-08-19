@@ -14,41 +14,53 @@ enum TapeKind: String, Codable, Equatable {
 }
 
 enum TapeSkin: String, Codable, CaseIterable, Identifiable {
+    case diane
     case cooper
-    case noir
-    case steel
+    case palmer
 
     var id: String { rawValue }
 
+    /// Old saves used Cooper for gold, Noir for black, Steel for the metal one.
+    static func migrated(raw: String, version: Int) -> TapeSkin {
+        if version >= 2 {
+            return TapeSkin(rawValue: raw) ?? .diane
+        }
+        switch raw {
+        case "noir": return .cooper
+        case "steel": return .palmer
+        default: return .diane
+        }
+    }
+
     var title: String {
         switch self {
+        case .diane: "Diane"
         case .cooper: "Cooper"
-        case .noir: "Noir"
-        case .steel: "Steel"
+        case .palmer: "Palmer"
         }
     }
 
     var blurb: String {
         switch self {
-        case .cooper: "The gold one."
-        case .noir: "Quiet black, silver hardware."
-        case .steel: "A worn metal dictaphone."
+        case .diane: "The gold one."
+        case .cooper: "Quiet black, silver hardware."
+        case .palmer: "A worn metal dictaphone."
         }
     }
 
     var imageName: String {
         switch self {
-        case .cooper: "SkinCooper"
-        case .noir: "SkinNoir"
-        case .steel: "SkinSteel"
+        case .diane: "SkinCooper"
+        case .cooper: "SkinNoir"
+        case .palmer: "SkinSteel"
         }
     }
 
     var pickerImageName: String {
         switch self {
-        case .cooper: "SkinCooperPick"
-        case .noir: "SkinNoirPick"
-        case .steel: "SkinSteelPick"
+        case .diane: "SkinCooperPick"
+        case .cooper: "SkinNoirPick"
+        case .palmer: "SkinSteelPick"
         }
     }
 
@@ -66,32 +78,24 @@ enum TapeSkin: String, Codable, CaseIterable, Identifiable {
         return SkinSpot(
             x: well.x + well.w * 0.47,
             y: well.y + well.h * 0.07,
-            w: self == .steel ? 0.018 : 0.026,
-            h: self == .steel ? 0.012 : 0.016
+            w: self == .palmer ? 0.018 : 0.026,
+            h: self == .palmer ? 0.012 : 0.016
         )
     }
 
     var cassetteWindow: SkinSpot {
         switch self {
-        case .cooper: SkinSpot(x: 0.266, y: 0.368, w: 0.462, h: 0.135)
-        case .noir: SkinSpot(x: 0.232, y: 0.312, w: 0.528, h: 0.168)
-        case .steel: SkinSpot(x: 0.234, y: 0.392, w: 0.512, h: 0.128)
-        }
-    }
-
-    /// Extra zoom so Kate's cassette fills the well, not a grey mat.
-    var cassetteZoom: CGFloat {
-        switch self {
-        case .cooper: 1.16
-        case .noir: 1.18
-        case .steel: 1.22
+        case .diane: SkinSpot(x: 0.266, y: 0.368, w: 0.462, h: 0.135)
+        case .cooper: SkinSpot(x: 0.194, y: 0.235, w: 0.645, h: 0.215)
+        case .palmer: SkinSpot(x: 0.220, y: 0.386, w: 0.590, h: 0.150)
         }
     }
 
     var pauseControl: SkinSpot? {
         switch self {
-        case .cooper: SkinSpot(x: 0.755, y: 0.585, w: 0.100, h: 0.070)
-        case .noir, .steel: nil
+        case .diane: SkinSpot(x: 0.798, y: 0.708, w: 0.050, h: 0.034)
+        case .cooper: SkinSpot(x: 0.750, y: 0.548, w: 0.048, h: 0.030)
+        case .palmer: nil
         }
     }
 }
@@ -110,6 +114,8 @@ struct Tape: Identifiable, Codable, Equatable, Hashable {
     var transcript: String
     var summary: String
     var durationSeconds: TimeInterval
+    var voiceFileName: String?
+    var written: Bool
 
     init(
         id: UUID = UUID(),
@@ -117,7 +123,9 @@ struct Tape: Identifiable, Codable, Equatable, Hashable {
         kind: TapeKind,
         transcript: String,
         summary: String,
-        durationSeconds: TimeInterval
+        durationSeconds: TimeInterval,
+        voiceFileName: String? = nil,
+        written: Bool = false
     ) {
         self.id = id
         self.createdAt = createdAt
@@ -125,6 +133,31 @@ struct Tape: Identifiable, Codable, Equatable, Hashable {
         self.transcript = transcript
         self.summary = summary
         self.durationSeconds = durationSeconds
+        self.voiceFileName = voiceFileName
+        self.written = written
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        createdAt = try container.decode(Date.self, forKey: .createdAt)
+        kind = try container.decode(TapeKind.self, forKey: .kind)
+        transcript = try container.decode(String.self, forKey: .transcript)
+        summary = try container.decode(String.self, forKey: .summary)
+        durationSeconds = try container.decode(TimeInterval.self, forKey: .durationSeconds)
+        voiceFileName = try container.decodeIfPresent(String.self, forKey: .voiceFileName)
+        written = try container.decodeIfPresent(Bool.self, forKey: .written) ?? false
+    }
+
+    var displayKicker: String {
+        if written, kind == .later { return "A later page" }
+        return kind.kicker
+    }
+
+    var voiceURL: URL? {
+        guard let voiceFileName else { return nil }
+        let url = TapeVault.url(named: voiceFileName)
+        return FileManager.default.fileExists(atPath: url.path) ? url : nil
     }
 
     var shareText: String {
@@ -173,16 +206,24 @@ struct AppData: Codable {
     var weeklyLetters: [WeeklyLetter]
     var showWordsWhileTalking: Bool
     var clicksEnabled: Bool
+    var displayName: String
+    var aboutYou: String
+    var keepVoice: Bool
+    var skinVersion: Int
 
     init(
         tapes: [Tape] = [],
-        skin: TapeSkin = .cooper,
+        skin: TapeSkin = .diane,
         reminderEnabled: Bool = true,
         reminderHour: Int = 7,
         reminderMinute: Int = 30,
         weeklyLetters: [WeeklyLetter] = [],
         showWordsWhileTalking: Bool = false,
-        clicksEnabled: Bool = true
+        clicksEnabled: Bool = true,
+        displayName: String = "",
+        aboutYou: String = "",
+        keepVoice: Bool = true,
+        skinVersion: Int = 2
     ) {
         self.tapes = tapes
         self.skin = skin
@@ -192,17 +233,27 @@ struct AppData: Codable {
         self.weeklyLetters = weeklyLetters
         self.showWordsWhileTalking = showWordsWhileTalking
         self.clicksEnabled = clicksEnabled
+        self.displayName = displayName
+        self.aboutYou = aboutYou
+        self.keepVoice = keepVoice
+        self.skinVersion = skinVersion
     }
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         tapes = try container.decodeIfPresent([Tape].self, forKey: .tapes) ?? []
-        skin = try container.decodeIfPresent(TapeSkin.self, forKey: .skin) ?? .cooper
+        let version = try container.decodeIfPresent(Int.self, forKey: .skinVersion) ?? 1
+        let rawSkin = try container.decodeIfPresent(String.self, forKey: .skin) ?? "diane"
+        skin = TapeSkin.migrated(raw: rawSkin, version: version)
+        skinVersion = 2
         reminderEnabled = try container.decodeIfPresent(Bool.self, forKey: .reminderEnabled) ?? true
         reminderHour = try container.decodeIfPresent(Int.self, forKey: .reminderHour) ?? 7
         reminderMinute = try container.decodeIfPresent(Int.self, forKey: .reminderMinute) ?? 30
         weeklyLetters = try container.decodeIfPresent([WeeklyLetter].self, forKey: .weeklyLetters) ?? []
         showWordsWhileTalking = try container.decodeIfPresent(Bool.self, forKey: .showWordsWhileTalking) ?? false
         clicksEnabled = try container.decodeIfPresent(Bool.self, forKey: .clicksEnabled) ?? true
+        displayName = try container.decodeIfPresent(String.self, forKey: .displayName) ?? ""
+        aboutYou = try container.decodeIfPresent(String.self, forKey: .aboutYou) ?? ""
+        keepVoice = try container.decodeIfPresent(Bool.self, forKey: .keepVoice) ?? true
     }
 }

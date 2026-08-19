@@ -16,17 +16,21 @@ enum Summarizer {
         return forgetDianeAsSpeaker(fallbackSummary(trimmed))
     }
 
-    static func weeklyLetter(from tapes: [Tape], weekStart: Date) async -> String? {
+    static func weeklyLetter(from tapes: [Tape], weekStart: Date, about: String = "") async -> String? {
         let pages = tapes.filter { $0.kind == .morningPages }
         guard pages.count >= 3 else { return nil }
         let joined = pages
             .sorted { $0.createdAt < $1.createdAt }
             .map { "\($0.createdAt.formatted(date: .abbreviated, time: .omitted))\n\($0.transcript)" }
             .joined(separator: "\n\n")
+        let note = about.trimmingCharacters(in: .whitespacesAndNewlines)
+        let aboutLine = note.isEmpty
+            ? ""
+            : "They wrote this about themselves, private, on this phone: \(note)\n\n"
         let prompt = """
-        These are one person's spoken morning pages for a week. The writer is not named Diane. Diane is the tape recorder, never the person speaking. Do not use any personal name. Write a short letter, 4 to 6 sentences, naming patterns in how they think. Stay specific to their words. No advice. No cheerleading. No questions. Do not use the em dash character. UK English.
+        These are one person's spoken morning pages for a week. The writer is not named Diane. Diane is the tape recorder, never the person speaking. Do not use any personal name. Do not write Dear Reader. Do not sign the letter. Do not write Your Name in brackets. Write 4 to 6 sentences naming patterns in how they think. Stay specific to their words. No advice. No cheerleading. No questions. Do not use the em dash character. UK English.
 
-        \(joined)
+        \(aboutLine)\(joined)
         """
         if let smart = await complete(prompt) {
             return forgetDianeAsSpeaker(smart)
@@ -100,5 +104,44 @@ enum Summarizer {
             return String(text.prefix(220))
         }
         return chunks.prefix(3).joined(separator: ". ") + "."
+    }
+}
+
+enum WeeklyLetterCopy {
+    static func present(_ body: String, name: String) -> String {
+        let core = stripEnvelope(body)
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return core }
+        return "Dear \(trimmed),\n\n\(core)\n\nSincerely,\n\(trimmed)"
+    }
+
+    private static func stripEnvelope(_ body: String) -> String {
+        var lines = body
+            .replacingOccurrences(of: "\r\n", with: "\n")
+            .components(separatedBy: "\n")
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+        while lines.first?.isEmpty == true {
+            lines.removeFirst()
+        }
+        if let first = lines.first, first.lowercased().hasPrefix("dear ") {
+            lines.removeFirst()
+            while lines.first?.isEmpty == true {
+                lines.removeFirst()
+            }
+        }
+        while let last = lines.last, last.isEmpty || isSignOff(last) {
+            lines.removeLast()
+        }
+        return lines.joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private static func isSignOff(_ line: String) -> Bool {
+        let folded = line
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .trimmingCharacters(in: CharacterSet(charactersIn: ".,"))
+            .lowercased()
+        return folded == "sincerely"
+            || folded == "[your name]"
+            || folded == "your name"
     }
 }

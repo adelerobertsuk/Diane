@@ -20,7 +20,6 @@ struct SettingsView: View {
                         ForEach(TapeSkin.allCases) { skin in
                             Button {
                                 Haptics.light()
-                                TapeSounds.shared.play(.pages)
                                 store.chooseSkin(skin)
                             } label: {
                                 VStack(spacing: 10) {
@@ -42,6 +41,31 @@ struct SettingsView: View {
                         .font(.system(size: 14, weight: .regular))
                         .foregroundStyle(palette.muted)
                         .padding(.leading, 4)
+
+                    Text("You")
+                        .kickerStyle()
+                        .padding(.leading, 4)
+                        .padding(.top, 8)
+
+                    VStack(alignment: .leading, spacing: 0) {
+                        TextField("Your name", text: nameBinding)
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundStyle(palette.ink)
+                            .textInputAutocapitalization(.words)
+                            .padding(Layout.cardPadding)
+                        Divider().overlay(palette.line)
+                        TextField("A little about you", text: aboutBinding, axis: .vertical)
+                            .font(.system(size: 16, weight: .regular))
+                            .foregroundStyle(palette.ink)
+                            .lineLimit(3...6)
+                            .padding(Layout.cardPadding)
+                    }
+                    .cardBackground()
+
+                    Text("Stays on this phone. The weekly letter uses it. We do not read your Contacts.")
+                        .font(.system(size: 13, weight: .regular))
+                        .foregroundStyle(palette.muted)
+                        .padding(.horizontal, 4)
 
                     Text("The morning")
                         .kickerStyle()
@@ -101,7 +125,7 @@ struct SettingsView: View {
                                 Text("Clicks")
                                     .font(.system(size: 16, weight: .medium))
                                     .foregroundStyle(palette.ink)
-                                Text("The tape clicks. A typewriter when the pages land. Never while you talk.")
+                                Text("The tape clicks. A short note when the pages land. Never while you talk.")
                                     .font(.system(size: 13, weight: .regular))
                                     .foregroundStyle(palette.muted)
                             }
@@ -112,7 +136,24 @@ struct SettingsView: View {
                     }
                     .cardBackground()
 
-                    Text("Nothing is uploaded. The voice is not kept. Only the words stay on this phone.")
+                    VStack(spacing: 0) {
+                        HStack {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Keep the voice")
+                                    .font(.system(size: 16, weight: .medium))
+                                    .foregroundStyle(palette.ink)
+                                Text("On, the sound sits with the pages. Off, only the words. Nothing is uploaded.")
+                                    .font(.system(size: 13, weight: .regular))
+                                    .foregroundStyle(palette.muted)
+                            }
+                            Spacer()
+                            SanctuaryToggle(isOn: voiceBinding)
+                        }
+                        .padding(Layout.cardPadding)
+                    }
+                    .cardBackground()
+
+                    Text("Nothing is uploaded. The voice stays on this phone, with the words.")
                         .font(.system(size: 13, weight: .regular))
                         .foregroundStyle(palette.muted)
                         .padding(.horizontal, 4)
@@ -155,6 +196,27 @@ struct SettingsView: View {
         Binding(
             get: { store.clicksEnabled },
             set: { store.setClicks($0) }
+        )
+    }
+
+    private var voiceBinding: Binding<Bool> {
+        Binding(
+            get: { store.keepVoice },
+            set: { store.setKeepVoice($0) }
+        )
+    }
+
+    private var nameBinding: Binding<String> {
+        Binding(
+            get: { store.displayName },
+            set: { store.setDisplayName($0) }
+        )
+    }
+
+    private var aboutBinding: Binding<String> {
+        Binding(
+            get: { store.aboutYou },
+            set: { store.setAboutYou($0) }
         )
     }
 

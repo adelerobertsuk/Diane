@@ -18,6 +18,14 @@ struct TapeStage: View {
             let well = fill.frame(skin.cassetteWindow)
             ZStack {
                 skin.studio
+
+                CassetteWell(rolling: recording)
+                    .frame(width: well.width, height: well.height)
+                    .clipped()
+                    .clipShape(RoundedRectangle(cornerRadius: max(3, well.height * 0.06), style: .continuous))
+                    .position(x: well.midX, y: well.midY)
+                    .allowsHitTesting(false)
+
                 Image(skin.imageName)
                     .resizable()
                     .scaledToFill()
@@ -28,19 +36,10 @@ struct TapeStage: View {
                     .clipped()
                     .accessibilityHidden(true)
 
-                CassetteWell(rolling: recording)
-                    .frame(width: well.width, height: well.height)
-                    .scaleEffect(skin.cassetteZoom)
-                    .clipped()
-                    .clipShape(RoundedRectangle(cornerRadius: max(4, well.height * 0.08), style: .continuous))
-                    .position(x: well.midX, y: well.midY)
-                    .allowsHitTesting(false)
-
-                lamp(fill.frame(skin.recLamp), on: recording, color: palette.rec, tiny: skin == .steel)
+                lamp(fill.frame(skin.recLamp), on: recording, color: palette.rec, tiny: skin == .palmer)
 
                 if let pauseSpot = skin.pauseControl, onPause != nil {
                     let pauseFrame = fill.frame(pauseSpot)
-                    pauseGlow(pauseFrame, on: paused)
                     Color.clear
                         .frame(width: max(52, pauseFrame.width), height: max(52, pauseFrame.height))
                         .contentShape(Rectangle())
@@ -76,21 +75,6 @@ struct TapeStage: View {
             .allowsHitTesting(false)
         }
         .allowsHitTesting(false)
-    }
-
-    @ViewBuilder
-    private func pauseGlow(_ frame: CGRect, on: Bool) -> some View {
-        RoundedRectangle(cornerRadius: max(8, frame.width * 0.18), style: .continuous)
-            .fill(palette.pause.opacity(on ? 0.42 : 0))
-            .overlay(
-                RoundedRectangle(cornerRadius: max(8, frame.width * 0.18), style: .continuous)
-                    .strokeBorder(palette.pause.opacity(on ? 0.95 : 0), lineWidth: 3)
-            )
-            .shadow(color: palette.pause.opacity(on ? 0.85 : 0), radius: on ? 14 : 0)
-            .frame(width: frame.width, height: frame.height)
-            .position(x: frame.midX, y: frame.midY)
-            .animation(.easeOut(duration: 0.22), value: on)
-            .allowsHitTesting(false)
     }
 }
 

@@ -10,6 +10,7 @@ struct HomeView: View {
     @State private var arming = false
     @State private var showSettings = false
     @State private var showPages = false
+    @State private var showWrite = false
     @State private var tick = Date()
 
     private let timer = Timer.publish(every: 0.25, on: .main, in: .common).autoconnect()
@@ -44,6 +45,7 @@ struct HomeView: View {
             VStack(spacing: 0) {
                 chrome
                 Spacer(minLength: 0)
+                    .allowsHitTesting(false)
                 working
             }
             .zIndex(1)
@@ -53,6 +55,9 @@ struct HomeView: View {
         }
         .sheet(isPresented: $showPages) {
             PagesView()
+        }
+        .sheet(isPresented: $showWrite) {
+            WritePagesView()
         }
         .onReceive(timer) { date in
             tick = date
@@ -89,7 +94,6 @@ struct HomeView: View {
         HStack {
             Button {
                 Haptics.light()
-                TapeSounds.shared.play(.pages)
                 showPages = true
             } label: {
                 Image(systemName: "rectangle.on.rectangle")
@@ -101,6 +105,21 @@ struct HomeView: View {
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Pages")
+            .opacity(listener.isListening ? 0.35 : 1)
+            .disabled(listener.isListening)
+
+            Button {
+                Haptics.light()
+                showWrite = true
+            } label: {
+                Image(systemName: "note")
+                    .font(.system(size: 13, weight: .regular))
+                    .foregroundStyle(palette.faint)
+                    .frame(width: 44, height: 44)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Write")
             .opacity(listener.isListening ? 0.35 : 1)
             .disabled(listener.isListening)
 
@@ -141,11 +160,17 @@ struct HomeView: View {
                     .font(.system(size: 13, weight: .medium, design: .monospaced))
                     .foregroundStyle(palette.muted)
                 Spacer(minLength: 8)
-                Button(listener.isPaused ? "Go" : "Pause") {
+                Button {
                     togglePause()
+                } label: {
+                    Image(systemName: listener.isPaused ? "play.fill" : "pause.fill")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(listener.isPaused ? palette.pause : palette.ink)
+                        .frame(width: 36, height: 36)
+                        .contentShape(Rectangle())
                 }
-                .font(.system(size: 13, weight: .medium))
-                .foregroundStyle(listener.isPaused ? palette.pause : palette.ink)
+                .buttonStyle(.plain)
+                .accessibilityLabel(listener.isPaused ? "Go" : "Pause")
             }
             VoiceWave(level: listener.audioLevel, resting: listener.isPaused)
         }
@@ -175,13 +200,13 @@ struct HomeView: View {
     @ViewBuilder
     private var working: some View {
         VStack(spacing: 12) {
-            if listener.isListening {
-                recordingMeter
-            }
             if store.showWordsWhileTalking, listener.isListening, !listener.fullText.isEmpty {
                 wordsPeek
             }
             bottom
+            if listener.isListening {
+                recordingMeter
+            }
         }
         .padding(.bottom, 10)
         .safeAreaPadding(.bottom)
@@ -211,6 +236,7 @@ struct HomeView: View {
                 Button("Not this time") {
                     listener.onStopped = nil
                     listener.stop()
+                    listener.discardRecording()
                     TapeSounds.shared.play(.stop)
                     finishing = false
                 }
@@ -232,6 +258,7 @@ struct HomeView: View {
         listener.onStopped = {
             Task { await finish() }
         }
+        listener.keepVoice = store.keepVoice
         Haptics.medium()
         if store.clicksEnabled {
             TapeSounds.shared.play(.play)
@@ -267,11 +294,13 @@ struct HomeView: View {
         }
         let text = listener.fullText
         let duration = listener.elapsed
+        let voice = listener.takeRecording()
         if text.isEmpty {
+            TapeVault.forget(voice)
             finishing = false
             return
         }
-        await store.saveTape(transcript: text, duration: duration)
+        await store.saveTape(transcript: text, duration: duration, voice: voice)
         finishing = false
     }
 }
