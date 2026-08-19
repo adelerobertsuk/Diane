@@ -1,3 +1,4 @@
+import AVFoundation
 import SwiftUI
 #if canImport(UIKit)
 import UIKit
@@ -15,28 +16,18 @@ struct TapeStage: View {
     var body: some View {
         GeometryReader { geo in
             let fill = SkinFill.map(skin: skin, view: geo.size, pressed: recording)
-            let well = fill.frame(skin.cassetteWindow)
             ZStack {
                 skin.studio
 
-                CassetteWell(rolling: recording)
-                    .frame(width: well.width, height: well.height)
-                    .clipped()
-                    .clipShape(RoundedRectangle(cornerRadius: max(3, well.height * 0.06), style: .continuous))
-                    .position(x: well.midX, y: well.midY)
-                    .allowsHitTesting(false)
-
-                Image(skin.imageName)
-                    .resizable()
-                    .scaledToFill()
-                    .scaleEffect(fill.extraScale)
-                    .offset(y: skin.fillOffsetY)
+                TapeFace(skin: skin, rolling: recording, pressed: false)
+                    .scaleEffect(recording ? 1.01 : 1)
                     .animation(.easeInOut(duration: 0.45), value: recording)
-                    .frame(width: geo.size.width, height: geo.size.height)
-                    .clipped()
+                    .allowsHitTesting(false)
                     .accessibilityHidden(true)
 
-                lamp(fill.frame(skin.recLamp), on: recording, color: palette.rec, tiny: skin == .palmer)
+                if let recSpot = skin.recLamp {
+                    lamp(fill.frame(recSpot), on: recording, color: palette.rec, tiny: skin == .palmer)
+                }
 
                 if let pauseSpot = skin.pauseControl, onPause != nil {
                     let pauseFrame = fill.frame(pauseSpot)
@@ -75,6 +66,81 @@ struct TapeStage: View {
             .allowsHitTesting(false)
         }
         .allowsHitTesting(false)
+    }
+}
+
+/// Video under Kate's still. The window in the PNG is the mask.
+struct TapeFace: UIViewRepresentable {
+    var skin: TapeSkin
+    var rolling: Bool
+    var pressed: Bool
+
+    func makeUIView(context: Context) -> TapeFaceView {
+        TapeFaceView()
+    }
+
+    func updateUIView(_ uiView: TapeFaceView, context: Context) {
+        uiView.skin = skin
+        uiView.rolling = rolling
+        uiView.pressed = pressed
+        CassetteDeck.shared.setRolling(rolling)
+        uiView.setNeedsLayout()
+    }
+}
+
+final class TapeFaceView: UIView {
+    var skin: TapeSkin = .diane {
+        didSet {
+            guard oldValue != skin else { return }
+            applySkin()
+        }
+    }
+
+    var rolling = false {
+        didSet {
+            guard oldValue != rolling else { return }
+            applySkin()
+        }
+    }
+
+    var pressed = false
+
+    private let playerLayer = AVPlayerLayer()
+    private let skinView = UIImageView()
+
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        isUserInteractionEnabled = false
+        clipsToBounds = true
+        backgroundColor = .clear
+
+        playerLayer.player = CassetteDeck.shared.player
+        playerLayer.videoGravity = .resizeAspectFill
+        playerLayer.backgroundColor = UIColor.clear.cgColor
+        layer.addSublayer(playerLayer)
+
+        skinView.contentMode = .scaleAspectFill
+        skinView.clipsToBounds = true
+        addSubview(skinView)
+        applySkin()
+    }
+
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        skinView.frame = bounds
+        let fill = SkinFill.map(skin: skin, view: bounds.size, pressed: pressed)
+        playerLayer.frame = fill.frame(skin.cassetteWindow)
+        playerLayer.zPosition = 0
+        skinView.layer.zPosition = 1
+    }
+
+    private func applySkin() {
+        skinView.image = UIImage(named: skin.faceImageName(recording: rolling))
+        setNeedsLayout()
     }
 }
 

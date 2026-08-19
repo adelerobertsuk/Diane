@@ -5,6 +5,7 @@ struct PagesView: View {
     @Environment(\.palette) private var palette
     @Environment(\.dismiss) private var dismiss
     @State private var selected: Tape?
+    @State private var openLetter: WeeklyLetter?
 
     var body: some View {
         NavigationStack {
@@ -19,14 +20,22 @@ struct PagesView: View {
 
                 if let letter = store.thisWeekLetter {
                     Section {
-                        Text(store.presentedLetter(letter))
-                            .readingStyle()
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(Layout.cardPadding)
-                            .cardBackground()
-                            .listRowInsets(EdgeInsets(top: 4, leading: Layout.screenInset, bottom: 8, trailing: Layout.screenInset))
-                            .listRowSeparator(.hidden)
-                            .listRowBackground(Color.clear)
+                        Button {
+                            Haptics.light()
+                            store.markLetterRead(letter)
+                            openLetter = letter
+                        } label: {
+                            LetterMailRow(
+                                unread: letter.isUnread,
+                                preview: WeeklyLetterCopy.preview(letter.body)
+                            )
+                        }
+                        .buttonStyle(.plain)
+                        .listRowInsets(EdgeInsets(top: 4, leading: Layout.screenInset, bottom: 8, trailing: Layout.screenInset))
+                        .listRowSeparator(.hidden)
+                        .listRowBackground(Color.clear)
+                        .accessibilityLabel(letter.isUnread ? "New letter to yourself" : "Letter to yourself")
+                        .accessibilityHint("Opens the letter")
                     } header: {
                         Text("This week")
                             .kickerStyle()
@@ -70,6 +79,9 @@ struct PagesView: View {
             }
             .navigationDestination(item: $selected) { tape in
                 TapeDetailView(tape: tape)
+            }
+            .navigationDestination(item: $openLetter) { letter in
+                LetterReadingView(letter: letter)
             }
         }
         .presentationDetents([.large])
@@ -194,5 +206,101 @@ private struct PadMark: View {
             }
         }
         .frame(width: 88, height: 58)
+    }
+}
+
+private struct LetterMailRow: View {
+    @Environment(\.palette) private var palette
+    var unread: Bool
+    var preview: String
+
+    var body: some View {
+        HStack(alignment: .center, spacing: 14) {
+            LetterMark()
+            VStack(alignment: .leading, spacing: 5) {
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Text("A letter to yourself")
+                        .font(.system(size: 16, weight: unread ? .semibold : .medium))
+                        .foregroundStyle(palette.ink)
+                        .lineLimit(1)
+                    Spacer(minLength: 8)
+                    Text("This week")
+                        .font(.system(size: 12, weight: .regular))
+                        .foregroundStyle(palette.faint)
+                        .lineLimit(1)
+                        .layoutPriority(1)
+                }
+                Text(preview)
+                    .font(.system(size: 15, weight: .regular))
+                    .foregroundStyle(palette.muted)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.leading)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            if unread {
+                Circle()
+                    .fill(palette.accent)
+                    .frame(width: 9, height: 9)
+                    .accessibilityHidden(true)
+            }
+        }
+        .padding(14)
+        .cardBackground()
+    }
+}
+
+private struct LetterMark: View {
+    @Environment(\.palette) private var palette
+
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .fill(palette.card)
+            EnvelopeShape()
+                .stroke(palette.accent.opacity(0.9), lineWidth: 1.4)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 16)
+        }
+        .frame(width: 88, height: 58)
+        .overlay(
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .strokeBorder(palette.line, lineWidth: 1)
+        )
+        .shadow(color: palette.ink.opacity(0.12), radius: 8, y: 4)
+        .accessibilityHidden(true)
+    }
+}
+
+private struct EnvelopeShape: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        path.addRoundedRect(in: rect, cornerSize: CGSize(width: 4, height: 4))
+        path.move(to: CGPoint(x: rect.minX, y: rect.minY + 1))
+        path.addLine(to: CGPoint(x: rect.midX, y: rect.midY + 2))
+        path.addLine(to: CGPoint(x: rect.maxX, y: rect.minY + 1))
+        return path
+    }
+}
+
+struct LetterReadingView: View {
+    @Environment(TapeStore.self) private var store
+    @Environment(\.palette) private var palette
+    let letter: WeeklyLetter
+
+    var body: some View {
+        ScrollView {
+            Text(store.presentedLetter(letter))
+                .readingStyle()
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(Layout.cardPadding)
+                .cardBackground()
+                .padding(.horizontal, Layout.screenInset)
+                .padding(.top, 12)
+                .padding(.bottom, 36)
+        }
+        .sanctuaryBackground()
+        .navigationTitle("This week")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(.hidden, for: .navigationBar)
     }
 }

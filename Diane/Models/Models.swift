@@ -56,6 +56,20 @@ enum TapeSkin: String, Codable, CaseIterable, Identifiable {
         }
     }
 
+    /// Kate's rec-on still, when she painted the lamp into the art.
+    var recordingImageName: String? {
+        switch self {
+        case .diane: "SkinCooperRec"
+        case .cooper: "SkinNoirRec"
+        default: nil
+        }
+    }
+
+    func faceImageName(recording: Bool) -> String {
+        if recording, let lit = recordingImageName { return lit }
+        return imageName
+    }
+
     var pickerImageName: String {
         switch self {
         case .diane: "SkinCooperPick"
@@ -72,29 +86,34 @@ enum TapeSkin: String, Codable, CaseIterable, Identifiable {
 
     var fillOffsetY: CGFloat { 0 }
 
-    /// Rec glow sits on the tape, top centre of the window.
-    var recLamp: SkinSpot {
-        let well = cassetteWindow
-        return SkinSpot(
-            x: well.x + well.w * 0.47,
-            y: well.y + well.h * 0.07,
-            w: self == .palmer ? 0.018 : 0.026,
-            h: self == .palmer ? 0.012 : 0.016
-        )
+    /// Rec glow overlay. Nil when Kate painted the lamp into the still.
+    var recLamp: SkinSpot? {
+        switch self {
+        case .diane, .cooper:
+            return nil
+        case .palmer:
+            let well = cassetteWindow
+            return SkinSpot(
+                x: well.x + well.w * 0.47,
+                y: well.y + well.h * 0.07,
+                w: self == .palmer ? 0.018 : 0.026,
+                h: self == .palmer ? 0.012 : 0.016
+            )
+        }
     }
 
     var cassetteWindow: SkinSpot {
         switch self {
-        case .diane: SkinSpot(x: 0.266, y: 0.368, w: 0.462, h: 0.135)
-        case .cooper: SkinSpot(x: 0.194, y: 0.235, w: 0.645, h: 0.215)
-        case .palmer: SkinSpot(x: 0.220, y: 0.386, w: 0.590, h: 0.150)
+        case .diane: SkinSpot(x: 0.215, y: 0.265, w: 0.570, h: 0.142)
+        case .cooper: SkinSpot(x: 0.2319, y: 0.2441, w: 0.5170, h: 0.1514)
+        case .palmer: SkinSpot(x: 0.2000, y: 0.3984, w: 0.5723, h: 0.1348)
         }
     }
 
     var pauseControl: SkinSpot? {
         switch self {
-        case .diane: SkinSpot(x: 0.798, y: 0.708, w: 0.050, h: 0.034)
-        case .cooper: SkinSpot(x: 0.750, y: 0.548, w: 0.048, h: 0.030)
+        case .diane: SkinSpot(x: 0.755, y: 0.539, w: 0.090, h: 0.046)
+        case .cooper: SkinSpot(x: 0.740, y: 0.545, w: 0.090, h: 0.048)
         case .palmer: nil
         }
     }
@@ -185,15 +204,19 @@ struct Tape: Identifiable, Codable, Equatable, Hashable {
     }
 }
 
-struct WeeklyLetter: Identifiable, Codable, Equatable {
+struct WeeklyLetter: Identifiable, Codable, Equatable, Hashable {
     var id: UUID
     var weekStart: Date
     var body: String
+    var readAt: Date?
 
-    init(id: UUID = UUID(), weekStart: Date, body: String) {
+    var isUnread: Bool { readAt == nil }
+
+    init(id: UUID = UUID(), weekStart: Date, body: String, readAt: Date? = nil) {
         self.id = id
         self.weekStart = weekStart
         self.body = body
+        self.readAt = readAt
     }
 }
 

@@ -169,6 +169,13 @@ final class TapeStore {
         WeeklyLetterCopy.present(letter.body, name: letterName)
     }
 
+    func markLetterRead(_ letter: WeeklyLetter) {
+        guard let index = weeklyLetters.firstIndex(where: { $0.id == letter.id }) else { return }
+        guard weeklyLetters[index].readAt == nil else { return }
+        weeklyLetters[index].readAt = .now
+        persist()
+    }
+
     private func persist() {
         Persistence.save(
             AppData(

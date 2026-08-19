@@ -115,6 +115,19 @@ enum WeeklyLetterCopy {
         return "Dear \(trimmed),\n\n\(core)\n\nSincerely,\n\(trimmed)"
     }
 
+    static func preview(_ body: String) -> String {
+        let core = stripEnvelope(body)
+            .replacingOccurrences(of: "\n", with: " ")
+            .replacingOccurrences(of: "  ", with: " ")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard core.count > 140 else { return core }
+        let cut = core.prefix(140)
+        if let space = cut.lastIndex(of: " ") {
+            return String(cut[..<space]) + "..."
+        }
+        return String(cut) + "..."
+    }
+
     private static func stripEnvelope(_ body: String) -> String {
         var lines = body
             .replacingOccurrences(of: "\r\n", with: "\n")
