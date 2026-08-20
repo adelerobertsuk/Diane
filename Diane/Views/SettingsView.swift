@@ -14,20 +14,27 @@ struct SettingsView: View {
                         .padding(.leading, 4)
 
                     SkinFrame(imageName: store.skin.pickerImageName, selected: true)
+                        .frame(height: 260)
                         .shadow(color: palette.ink.opacity(0.1), radius: 20, y: 12)
 
-                    HStack(spacing: 10) {
+                    LazyVGrid(
+                        columns: [
+                            GridItem(.flexible(), spacing: 10),
+                            GridItem(.flexible(), spacing: 10)
+                        ],
+                        spacing: 12
+                    ) {
                         ForEach(TapeSkin.allCases) { skin in
                             Button {
                                 Haptics.light()
                                 store.chooseSkin(skin)
                             } label: {
-                                VStack(spacing: 10) {
+                                VStack(spacing: 8) {
                                     SkinFrame(
                                         imageName: skin.pickerImageName,
                                         selected: store.skin == skin
                                     )
-                                    .frame(height: 118)
+                                    .frame(height: 140)
                                     Text(skin.title)
                                         .font(.system(size: 13, weight: .medium))
                                         .foregroundStyle(palette.ink)
@@ -248,10 +255,9 @@ private struct SkinFrame: View {
         Image(imageName)
             .resizable()
             .scaledToFit()
-            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-            .padding(8)
-            .frame(maxWidth: .infinity)
-            .background(palette.card)
+            .padding(10)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(palette.bg)
             .overlay(
                 RoundedRectangle(cornerRadius: 18, style: .continuous)
                     .strokeBorder(

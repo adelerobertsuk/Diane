@@ -1,0 +1,31 @@
+{
+  "masterSize": {
+    "w": 1206,
+    "h": 2622
+  },
+  "cassetteWindow": {
+    "x": 0.108624,
+    "y": 0.090008,
+    "w": 0.410448,
+    "h": 0.389397
+  },
+  "recordButton": {
+    "x": 0.64,
+    "y": 0.78,
+    "w": 0.20,
+    "h": 0.12
+  },
+  "volumeTrack": {
+    "x": 0.56,
+    "y": 0.09,
+    "w": 0.28,
+    "h": 0.34
+  },
+  "recLamp": {
+    "x": 0.66,
+    "y": 0.095,
+    "w": 0.06,
+    "h": 0.028
+  },
+  "notes": "From Kate phone-fit wallpaper IMG_1628 (1206x2622). Cassette baked in. No video. Hits measured on master."
+}

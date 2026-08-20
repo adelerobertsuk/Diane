@@ -1,0 +1,56 @@
+{
+  "plateSize": {
+    "w": 720,
+    "h": 1080
+  },
+  "contentSafeMarginPx": 10,
+  "cassetteWindow": {
+    "x": 0.265248,
+    "y": 0.133464,
+    "w": 0.335461,
+    "h": 0.401367
+  },
+  "recordControl": {
+    "x": 0.670922,
+    "y": 0.818359,
+    "w": 0.177305,
+    "h": 0.085938
+  },
+  "volumeControl": {
+    "x": 0.688652,
+    "y": 0.132487,
+    "w": 0.147518,
+    "h": 0.412435
+  },
+  "recLamp": {
+    "x": 0.686525,
+    "y": 0.119466,
+    "w": 0.051773,
+    "h": 0.026042
+  },
+  "reelLeft": {
+    "centerX": 0.458333,
+    "centerY": 0.310185,
+    "diameter": 0.340278
+  },
+  "reelRight": {
+    "centerX": 0.458333,
+    "centerY": 0.689815,
+    "diameter": 0.340278
+  },
+  "pivot": "imageCenter",
+  "zOrder": [
+    "well",
+    "reel-left",
+    "reel-right",
+    "shell",
+    "glass"
+  ],
+  "motion": {
+    "recordingDegreesPerSecond": 150,
+    "idle": 0,
+    "easeInSeconds": 0.35,
+    "easeOutSeconds": 0.5,
+    "holdAngleOnStop": true
+  }
+}

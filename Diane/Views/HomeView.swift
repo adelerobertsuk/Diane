@@ -12,12 +12,18 @@ struct HomeView: View {
     @State private var showPages = false
     @State private var showWrite = false
     @State private var tick = Date()
+    /// MyTablo-style: hide chrome from the top so Record stays clean.
+    @State private var chromeRevealed = true
 
     private let timer = Timer.publish(every: 0.25, on: .main, in: .common).autoconnect()
 
     private var elapsed: TimeInterval {
         _ = tick
         return listener.elapsed
+    }
+
+    private var hasHardwareRecord: Bool {
+        store.skin.recordControl != nil
     }
 
     var body: some View {
@@ -29,11 +35,19 @@ struct HomeView: View {
                 skin: store.skin,
                 listening: listener.isListening,
                 paused: listener.isPaused,
-                onPause: listener.isListening ? { togglePause() } : nil
+                onPause: listener.isListening && store.skin.pauseControl != nil
+                    ? { togglePause() }
+                    : nil,
+                onRecord: store.skin.recordControl != nil
+                    ? { recordHit() }
+                    : nil,
+                showsVolume: store.skin.volumeControl != nil
             )
             .ignoresSafeArea()
             .zIndex(0)
             .onTapGesture {
+                // Hardware Record owns start/stop. Body tap only for skins without a Record key.
+                guard !hasHardwareRecord else { return }
                 if listener.isPaused {
                     togglePause()
                     return
@@ -46,7 +60,9 @@ struct HomeView: View {
                 chrome
                 Spacer(minLength: 0)
                     .allowsHitTesting(false)
-                working
+                if chromeRevealed {
+                    working
+                }
             }
             .zIndex(1)
         }
@@ -91,58 +107,90 @@ struct HomeView: View {
     }
 
     private var chrome: some View {
-        HStack {
-            Button {
-                Haptics.light()
-                showPages = true
-            } label: {
-                Image(systemName: "rectangle.on.rectangle")
-                    .font(.system(size: 16, weight: .medium))
-                    .foregroundStyle(palette.ink)
-                    .frame(width: 44, height: 44)
-                    .background(.ultraThinMaterial, in: Circle())
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Pages")
-            .opacity(listener.isListening ? 0.35 : 1)
-            .disabled(listener.isListening)
+        HStack(spacing: 8) {
+            if chromeRevealed {
+                Button {
+                    Haptics.light()
+                    showPages = true
+                } label: {
+                    Image(systemName: "rectangle.on.rectangle")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundStyle(palette.ink)
+                        .frame(width: 44, height: 44)
+                        .background(.ultraThinMaterial, in: Circle())
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Pages")
+                .opacity(listener.isListening ? 0.35 : 1)
+                .disabled(listener.isListening)
 
-            Button {
-                Haptics.light()
-                showWrite = true
-            } label: {
-                Image(systemName: "note")
-                    .font(.system(size: 13, weight: .regular))
-                    .foregroundStyle(palette.faint)
-                    .frame(width: 44, height: 44)
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Write")
-            .opacity(listener.isListening ? 0.35 : 1)
-            .disabled(listener.isListening)
+                Button {
+                    Haptics.light()
+                    showWrite = true
+                } label: {
+                    Image(systemName: "note")
+                        .font(.system(size: 13, weight: .regular))
+                        .foregroundStyle(palette.faint)
+                        .frame(width: 44, height: 44)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Write")
+                .opacity(listener.isListening ? 0.35 : 1)
+                .disabled(listener.isListening)
 
-            Spacer()
+                Spacer()
 
-            Button {
-                Haptics.light()
-                showSettings = true
-            } label: {
-                Image(systemName: "slider.horizontal.3")
-                    .font(.system(size: 16, weight: .medium))
-                    .foregroundStyle(palette.ink)
-                    .frame(width: 44, height: 44)
-                    .background(.ultraThinMaterial, in: Circle())
-                    .contentShape(Rectangle())
+                Button {
+                    Haptics.light()
+                    showSettings = true
+                } label: {
+                    Image(systemName: "slider.horizontal.3")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundStyle(palette.ink)
+                        .frame(width: 44, height: 44)
+                        .background(.ultraThinMaterial, in: Circle())
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Settings")
+                .opacity(listener.isListening ? 0.35 : 1)
+                .disabled(listener.isListening)
+
+                Button {
+                    Haptics.light()
+                    withAnimation(.easeInOut(duration: 0.28)) { chromeRevealed = false }
+                } label: {
+                    Image(systemName: "eye.slash")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(palette.ink)
+                        .frame(width: 44, height: 44)
+                        .background(.ultraThinMaterial, in: Circle())
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Hide controls")
+            } else {
+                Spacer()
+                Button {
+                    Haptics.light()
+                    withAnimation(.easeInOut(duration: 0.28)) { chromeRevealed = true }
+                } label: {
+                    Image(systemName: "eye")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(palette.ink.opacity(0.75))
+                        .frame(width: 40, height: 40)
+                        .background(.ultraThinMaterial, in: Circle())
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Show controls")
             }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Settings")
-            .opacity(listener.isListening ? 0.35 : 1)
-            .disabled(listener.isListening)
         }
         .padding(.horizontal, 10)
         .padding(.top, 4)
+        .animation(.easeInOut(duration: 0.28), value: chromeRevealed)
         .zIndex(2)
     }
 
@@ -250,6 +298,15 @@ struct HomeView: View {
             }
         }
         .frame(maxWidth: .infinity)
+    }
+
+    private func recordHit() {
+        guard !store.isSaving, !arming, !finishing else { return }
+        if listener.isListening {
+            Task { await finish() }
+        } else {
+            begin()
+        }
     }
 
     private func begin() {

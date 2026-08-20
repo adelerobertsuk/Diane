@@ -1,0 +1,31 @@
+{
+  "masterSize": {
+    "w": 1206,
+    "h": 2622
+  },
+  "cassetteWindow": {
+    "x": 0.18,
+    "y": 0.32,
+    "w": 0.58,
+    "h": 0.24
+  },
+  "recordButton": {
+    "x": 0.72,
+    "y": 0.74,
+    "w": 0.14,
+    "h": 0.10
+  },
+  "volumeTrack": {
+    "x": 0.82,
+    "y": 0.40,
+    "w": 0.14,
+    "h": 0.24
+  },
+  "recLamp": {
+    "x": 0.776,
+    "y": 0.778,
+    "w": 0.017,
+    "h": 0.008
+  },
+  "notes": "From Kate phone-fit wallpaper View recent photos 4.png (1206x2622). Cassette baked in. Record is rightmost transport key. Volume is side dial. No video."
+}

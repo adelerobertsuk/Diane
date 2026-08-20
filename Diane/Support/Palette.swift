@@ -190,6 +190,49 @@ extension View {
     func readingStyle(muted: Bool = false) -> some View {
         modifier(ReadingText(muted: muted))
     }
+
+    /// Floating chrome. Liquid Glass on iOS 26+, frosted disc otherwise.
+    func chromeGlassCircle() -> some View {
+        modifier(ChromeGlass(shape: .circle))
+    }
+
+    func chromeGlassCapsule() -> some View {
+        modifier(ChromeGlass(shape: .capsule))
+    }
+}
+
+private enum ChromeGlassShape {
+    case circle
+    case capsule
+}
+
+private struct ChromeGlass: ViewModifier {
+    @Environment(\.palette) private var palette
+    var shape: ChromeGlassShape
+
+    func body(content: Content) -> some View {
+        if #available(iOS 26.0, *) {
+            switch shape {
+            case .circle:
+                content.glassEffect(.regular.interactive(), in: .circle)
+            case .capsule:
+                content.glassEffect(.regular.interactive(), in: .capsule)
+            }
+        } else {
+            switch shape {
+            case .circle:
+                content
+                    .background(.ultraThinMaterial, in: Circle())
+                    .overlay(Circle().strokeBorder(Color.white.opacity(0.45), lineWidth: 0.8))
+                    .shadow(color: palette.ink.opacity(0.10), radius: 10, y: 4)
+            case .capsule:
+                content
+                    .background(.ultraThinMaterial, in: Capsule())
+                    .overlay(Capsule().strokeBorder(Color.white.opacity(0.45), lineWidth: 0.8))
+                    .shadow(color: palette.ink.opacity(0.10), radius: 10, y: 4)
+            }
+        }
+    }
 }
 
 private struct KickerText: ViewModifier {

@@ -1,0 +1,31 @@
+{
+  "masterSize": {
+    "w": 1206,
+    "h": 2622
+  },
+  "cassetteWindow": {
+    "x": 0.122720,
+    "y": 0.139969,
+    "w": 0.352405,
+    "h": 0.409611
+  },
+  "recordButton": {
+    "x": 0.58,
+    "y": 0.70,
+    "w": 0.26,
+    "h": 0.14
+  },
+  "volumeTrack": {
+    "x": 0.45,
+    "y": 0.14,
+    "w": 0.24,
+    "h": 0.38
+  },
+  "recLamp": {
+    "x": 0.743,
+    "y": 0.199,
+    "w": 0.027,
+    "h": 0.015
+  },
+  "notes": "From Kate phone-fit wallpaper View recent photos 2.png (1206x2622). Cassette baked in. No video."
+}

@@ -1,0 +1,31 @@
+{
+  "masterSize": {
+    "w": 1206,
+    "h": 2622
+  },
+  "cassetteWindow": {
+    "x": 0.22,
+    "y": 0.12,
+    "w": 0.38,
+    "h": 0.40
+  },
+  "recordButton": {
+    "x": 0.68,
+    "y": 0.56,
+    "w": 0.16,
+    "h": 0.10
+  },
+  "volumeTrack": {
+    "x": 0.58,
+    "y": 0.16,
+    "w": 0.22,
+    "h": 0.32
+  },
+  "recLamp": {
+    "x": 0.725,
+    "y": 0.595,
+    "w": 0.05,
+    "h": 0.025
+  },
+  "notes": "From Kate phone-fit wallpaper View recent photos 3.png (1206x2622). Cassette baked in. Record is REC key. No video."
+}

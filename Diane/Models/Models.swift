@@ -17,6 +17,7 @@ enum TapeSkin: String, Codable, CaseIterable, Identifiable {
     case diane
     case cooper
     case palmer
+    case earle
 
     var id: String { rawValue }
 
@@ -37,6 +38,7 @@ enum TapeSkin: String, Codable, CaseIterable, Identifiable {
         case .diane: "Diane"
         case .cooper: "Cooper"
         case .palmer: "Palmer"
+        case .earle: "Earle"
         }
     }
 
@@ -45,6 +47,7 @@ enum TapeSkin: String, Codable, CaseIterable, Identifiable {
         case .diane: "The gold one."
         case .cooper: "Quiet black, silver hardware."
         case .palmer: "A worn metal dictaphone."
+        case .earle: "Brushed silver."
         }
     }
 
@@ -53,6 +56,7 @@ enum TapeSkin: String, Codable, CaseIterable, Identifiable {
         case .diane: "SkinCooper"
         case .cooper: "SkinNoir"
         case .palmer: "SkinSteel"
+        case .earle: "SkinEarle"
         }
     }
 
@@ -61,7 +65,8 @@ enum TapeSkin: String, Codable, CaseIterable, Identifiable {
         switch self {
         case .diane: "SkinCooperRec"
         case .cooper: "SkinNoirRec"
-        default: nil
+        case .palmer: "SkinSteelRec"
+        case .earle: "SkinEarleRec"
         }
     }
 
@@ -75,6 +80,7 @@ enum TapeSkin: String, Codable, CaseIterable, Identifiable {
         case .diane: "SkinCooperPick"
         case .cooper: "SkinNoirPick"
         case .palmer: "SkinSteelPick"
+        case .earle: "SkinEarlePick"
         }
     }
 
@@ -86,36 +92,61 @@ enum TapeSkin: String, Codable, CaseIterable, Identifiable {
 
     var fillOffsetY: CGFloat { 0 }
 
-    /// Rec glow overlay. Nil when Kate painted the lamp into the still.
-    var recLamp: SkinSpot? {
+    /// Soft pulse overlay. Off for now; Kate paints the lamp into stills and loops.
+    var recLamp: SkinSpot? { nil }
+
+    /// Speaker grille. Words peek sits here so branding stays clear.
+    var speakerGrille: SkinSpot {
         switch self {
-        case .diane, .cooper:
-            return nil
-        case .palmer:
-            let well = cassetteWindow
-            return SkinSpot(
-                x: well.x + well.w * 0.47,
-                y: well.y + well.h * 0.07,
-                w: self == .palmer ? 0.018 : 0.026,
-                h: self == .palmer ? 0.012 : 0.016
-            )
+        case .diane: SkinSpot(x: 0.16, y: 0.46, w: 0.68, h: 0.22)
+        case .cooper: SkinSpot(x: 0.14, y: 0.64, w: 0.72, h: 0.26)
+        case .palmer: SkinSpot(x: 0.14, y: 0.08, w: 0.72, h: 0.22)
+        case .earle: SkinSpot(x: 0.16, y: 0.52, w: 0.52, h: 0.22)
         }
     }
 
+    /// From Kate phone-fit wallpaper (baked cassette, no video).
     var cassetteWindow: SkinSpot {
         switch self {
-        case .diane: SkinSpot(x: 0.215, y: 0.265, w: 0.570, h: 0.142)
-        case .cooper: SkinSpot(x: 0.2319, y: 0.2441, w: 0.5170, h: 0.1514)
-        case .palmer: SkinSpot(x: 0.2000, y: 0.3984, w: 0.5723, h: 0.1348)
+        case .diane: SkinSpot(x: 0.108624, y: 0.090008, w: 0.410448, h: 0.389397)
+        case .cooper: SkinSpot(x: 0.22, y: 0.12, w: 0.38, h: 0.40)
+        case .palmer: SkinSpot(x: 0.18, y: 0.32, w: 0.58, h: 0.24)
+        case .earle: SkinSpot(x: 0.122720, y: 0.139969, w: 0.352405, h: 0.409611)
+        }
+    }
+
+    /// Hardware Record key.
+    var recordControl: SkinSpot? {
+        switch self {
+        case .diane: SkinSpot(x: 0.64, y: 0.78, w: 0.20, h: 0.12)
+        case .cooper: SkinSpot(x: 0.68, y: 0.56, w: 0.16, h: 0.10)
+        case .palmer: SkinSpot(x: 0.72, y: 0.74, w: 0.14, h: 0.10)
+        case .earle: SkinSpot(x: 0.58, y: 0.70, w: 0.26, h: 0.14)
+        }
+    }
+
+    /// Hardware Volume fader.
+    var volumeControl: SkinSpot? {
+        switch self {
+        case .diane: SkinSpot(x: 0.56, y: 0.09, w: 0.28, h: 0.34)
+        case .cooper: SkinSpot(x: 0.58, y: 0.16, w: 0.22, h: 0.32)
+        case .palmer: SkinSpot(x: 0.82, y: 0.40, w: 0.14, h: 0.24)
+        case .earle: SkinSpot(x: 0.45, y: 0.14, w: 0.24, h: 0.38)
+        }
+    }
+
+    /// Full-frame Kate reel loop (same wallpaper composition). Nil = still only.
+    var reelLoopName: String? {
+        switch self {
+        case .diane: "DianeKateLoop"
+        case .cooper: "CooperKateLoop"
+        case .palmer: "PalmerKateLoop"
+        case .earle: "EarleKateLoop"
         }
     }
 
     var pauseControl: SkinSpot? {
-        switch self {
-        case .diane: SkinSpot(x: 0.755, y: 0.539, w: 0.090, h: 0.046)
-        case .cooper: SkinSpot(x: 0.740, y: 0.545, w: 0.090, h: 0.048)
-        case .palmer: nil
-        }
+        nil
     }
 }
 
