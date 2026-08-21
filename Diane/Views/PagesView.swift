@@ -177,35 +177,26 @@ struct CassetteMark: View {
 }
 
 private struct PadMark: View {
-    @Environment(\.palette) private var palette
     let seed: UUID
 
-    private var band: Color {
-        let bands = [palette.rec, palette.pause, palette.accent, palette.ink, palette.muted]
-        let index = Int(seed.hashValue.magnitude % UInt(bands.count))
-        return bands[index]
+    private var imageName: String {
+        let names = [
+            "WrittenNotePin",
+            "WrittenNoteTape",
+            "WrittenNoteClip",
+            "WrittenNotePencilGold",
+            "WrittenNotePencilCream",
+            "WrittenNotePencilBlue",
+            "WrittenNotePencilOlive"
+        ]
+        let index = Int(seed.hashValue.magnitude % UInt(names.count))
+        return names[index]
     }
 
     var body: some View {
-        ZStack(alignment: .top) {
-            palette.card
-            VStack(spacing: 0) {
-                Rectangle()
-                    .fill(band)
-                    .frame(height: 5)
-                VStack(spacing: 8) {
-                    ForEach(0..<3, id: \.self) { _ in
-                        Rectangle()
-                            .fill(palette.ink.opacity(0.12))
-                            .frame(height: 1)
-                    }
-                }
-                .padding(.horizontal, 9)
-                .padding(.top, 10)
-                Spacer(minLength: 0)
-            }
-        }
-        .frame(width: 88, height: 58)
+        Image(imageName)
+            .resizable()
+            .scaledToFill()
     }
 }
 

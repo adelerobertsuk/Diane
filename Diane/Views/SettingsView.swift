@@ -4,6 +4,7 @@ struct SettingsView: View {
     @Environment(TapeStore.self) private var store
     @Environment(\.palette) private var palette
     @Environment(\.dismiss) private var dismiss
+    @State private var nudgeStatus = "Checking notifications…"
 
     var body: some View {
         NavigationStack {
@@ -13,8 +14,9 @@ struct SettingsView: View {
                         .kickerStyle()
                         .padding(.leading, 4)
 
+                    /// Kate pick art is 1024×682. Frame matches that ratio so it fills the gold border with no stretch.
                     SkinFrame(imageName: store.skin.pickerImageName, selected: true)
-                        .frame(height: 260)
+                        .aspectRatio(SkinFrame.pickAspect, contentMode: .fit)
                         .shadow(color: palette.ink.opacity(0.1), radius: 20, y: 12)
 
                     LazyVGrid(
@@ -34,7 +36,7 @@ struct SettingsView: View {
                                         imageName: skin.pickerImageName,
                                         selected: store.skin == skin
                                     )
-                                    .frame(height: 140)
+                                    .aspectRatio(SkinFrame.pickAspect, contentMode: .fit)
                                     Text(skin.title)
                                         .font(.system(size: 13, weight: .medium))
                                         .foregroundStyle(palette.ink)
@@ -85,7 +87,7 @@ struct SettingsView: View {
                                 Text("Wake with Diane")
                                     .font(.system(size: 16, weight: .medium))
                                     .foregroundStyle(palette.ink)
-                                Text("A quiet tap so you stay a minute before you go. If it does not arrive, iPhone Settings, Notifications, Diane, Allow.")
+                                Text("A quiet tap at the time below. Not email. A banner on the lock screen.")
                                     .font(.system(size: 13, weight: .regular))
                                     .foregroundStyle(palette.muted)
                             }
@@ -105,9 +107,35 @@ struct SettingsView: View {
                             .padding(Layout.cardPadding)
                             .font(.system(size: 16, weight: .medium))
                             .foregroundStyle(palette.ink)
+
+                            Divider().overlay(palette.line)
+                            Button {
+                                Haptics.light()
+                                MorningNudge.sendTest()
+                            } label: {
+                                HStack {
+                                    Text("Send a test nudge")
+                                        .font(.system(size: 16, weight: .medium))
+                                        .foregroundStyle(palette.ink)
+                                    Spacer()
+                                    Text("3 sec")
+                                        .font(.system(size: 13, weight: .regular))
+                                        .foregroundStyle(palette.muted)
+                                }
+                                .padding(Layout.cardPadding)
+                                .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
                         }
                     }
                     .cardBackground()
+
+                    Text(nudgeStatus)
+                        .font(.system(size: 13, weight: .regular))
+                        .foregroundStyle(palette.muted)
+                        .padding(.horizontal, 4)
+                        .onAppear { refreshNudgeStatus() }
+                        .onChange(of: store.reminderEnabled) { _, _ in refreshNudgeStatus() }
 
                     VStack(spacing: 0) {
                         HStack {
@@ -192,6 +220,10 @@ struct SettingsView: View {
         )
     }
 
+    private func refreshNudgeStatus() {
+        MorningNudge.authorizationLabel { nudgeStatus = $0 }
+    }
+
     private var wordsBinding: Binding<Bool> {
         Binding(
             get: { store.showWordsWhileTalking },
@@ -251,20 +283,24 @@ private struct SkinFrame: View {
     let imageName: String
     var selected: Bool = false
 
+    /// Matches Kate’s picker PNGs. Keep art at this ratio and the gold frame fills edge to edge.
+    static let pickAspect: CGFloat = 1024 / 682
+    static let pickWidth: CGFloat = 1024
+    static let pickHeight: CGFloat = 682
+
     var body: some View {
         Image(imageName)
             .resizable()
             .scaledToFit()
-            .padding(10)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(palette.bg)
             .overlay(
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
                     .strokeBorder(
                         selected ? palette.accent : palette.line,
                         lineWidth: selected ? 1.5 : 1
                     )
             )
-            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 }

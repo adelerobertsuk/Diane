@@ -81,7 +81,7 @@ struct TapeDetailView: View {
             }
         }
         .sheet(isPresented: $showLetter) {
-            MailLetterView(tape: tape, isPresented: $showLetter)
+            MailLetterView(tape: tape, addressedTo: store.letterName, isPresented: $showLetter)
                 .ignoresSafeArea()
         }
         .sheet(isPresented: $showTextShare) {

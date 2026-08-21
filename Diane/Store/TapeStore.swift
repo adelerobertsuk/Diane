@@ -81,8 +81,13 @@ final class TapeStore {
             return
         }
         isSaving = true
+        defer { isSaving = false }
         let kind: TapeKind = hasMorningPagesToday ? .later : .morningPages
-        let summary = await Summarizer.summarize(text, kind: kind)
+        let summary = await withTimeout(seconds: 12) {
+            await Summarizer.summarize(text, kind: kind)
+        } ?? Summarizer.forgetDianeAsSpeaker(
+            text.split(whereSeparator: \.isNewline).first.map(String.init) ?? text
+        )
         var tape = Tape(kind: kind, transcript: text, summary: summary, durationSeconds: duration, written: written)
         if keepVoice, let voice {
             let compact = await TapeVault.compact(voice)
@@ -93,7 +98,6 @@ final class TapeStore {
         tapes.insert(tape, at: 0)
         persist()
         await refreshWeeklyLetterIfNeeded()
-        isSaving = false
         if !written {
             TapeSounds.shared.play(.save)
         }
@@ -193,5 +197,21 @@ final class TapeStore {
                 skinVersion: 2
             )
         )
+    }
+}
+
+private func withTimeout<T: Sendable>(
+    seconds: Double,
+    operation: @escaping @Sendable () async -> T
+) async -> T? {
+    await withTaskGroup(of: T?.self) { group in
+        group.addTask { await operation() }
+        group.addTask {
+            try? await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
+            return nil
+        }
+        let first = await group.next() ?? nil
+        group.cancelAll()
+        return first ?? nil
     }
 }

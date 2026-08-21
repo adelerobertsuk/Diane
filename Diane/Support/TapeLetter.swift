@@ -126,6 +126,91 @@ enum TapeLetter {
         """
     }
 
+    /// Kate's brown envelope, with a soft ink stamp and the owner's name in handwriting on the right.
+    static func envelopePNG(addressedTo name: String) -> Data? {
+        guard let base = UIImage(named: "LetterFolder") else { return nil }
+        let size = base.size
+        let format = UIGraphicsImageRendererFormat.default()
+        format.scale = base.scale
+        format.opaque = false
+        let renderer = UIGraphicsImageRenderer(size: size, format: format)
+        let who = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        let label = who.isEmpty ? "for you" : who
+
+        let data = renderer.pngData { ctx in
+            let cg = ctx.cgContext
+            base.draw(in: CGRect(origin: .zero, size: size))
+
+            // Stamp sits on the clear kraft face, right of the taped cassette, above the address lines.
+            let stampCenter = CGPoint(x: size.width * 0.70, y: size.height * 0.48)
+            let stampRadius = min(size.width, size.height) * 0.125
+            let ink = UIColor(red: 0.42, green: 0.18, blue: 0.16, alpha: 0.82)
+
+            cg.saveGState()
+            cg.translateBy(x: stampCenter.x, y: stampCenter.y)
+            cg.rotate(by: -0.12)
+
+            // Outer ring
+            let outer = CGRect(x: -stampRadius, y: -stampRadius, width: stampRadius * 2, height: stampRadius * 2)
+            cg.setStrokeColor(ink.cgColor)
+            cg.setLineWidth(max(2.2, stampRadius * 0.055))
+            cg.strokeEllipse(in: outer)
+
+            // Inner ring
+            let inset = stampRadius * 0.12
+            let inner = outer.insetBy(dx: inset, dy: inset)
+            cg.setLineWidth(max(1.2, stampRadius * 0.03))
+            cg.strokeEllipse(in: inner)
+
+            // Tiny "FROM · DIANE" around the top of the stamp
+            let kicker = "FROM  ·  DIANE"
+            let kickerFont = UIFont(name: "Courier", size: max(9, stampRadius * 0.18))
+                ?? UIFont.monospacedSystemFont(ofSize: max(9, stampRadius * 0.18), weight: .semibold)
+            let kickerAttrs: [NSAttributedString.Key: Any] = [
+                .font: kickerFont,
+                .foregroundColor: ink.withAlphaComponent(0.9),
+                .kern: 1.1
+            ]
+            let kickerSize = (kicker as NSString).size(withAttributes: kickerAttrs)
+            (kicker as NSString).draw(
+                at: CGPoint(x: -kickerSize.width / 2, y: -stampRadius * 0.42 - kickerSize.height / 2),
+                withAttributes: kickerAttrs
+            )
+
+            // Handwriting name through the middle
+            let baseHand =
+                UIFont(name: "Snell Roundhand", size: max(22, stampRadius * 0.55))
+                ?? UIFont(name: "Savoye LET", size: max(24, stampRadius * 0.58))
+                ?? UIFont(name: "Apple Chancery", size: max(20, stampRadius * 0.5))
+                ?? UIFont.systemFont(ofSize: max(20, stampRadius * 0.48), weight: .regular).withTraits(.traitItalic)
+            let maxNameWidth = stampRadius * 1.55
+            var drawName = label
+            var hand = baseHand
+            var nameSize = (drawName as NSString).size(withAttributes: [.font: hand])
+            if nameSize.width > maxNameWidth {
+                hand = baseHand.withSize(baseHand.pointSize * 0.78)
+                nameSize = (drawName as NSString).size(withAttributes: [.font: hand])
+                while nameSize.width > maxNameWidth, drawName.count > 8 {
+                    drawName = String(drawName.dropLast())
+                    nameSize = (drawName as NSString).size(withAttributes: [.font: hand])
+                }
+                if drawName != label { drawName += "…" }
+                nameSize = (drawName as NSString).size(withAttributes: [.font: hand])
+            }
+            let handAttrs: [NSAttributedString.Key: Any] = [
+                .font: hand,
+                .foregroundColor: ink.withAlphaComponent(0.92)
+            ]
+            (drawName as NSString).draw(
+                at: CGPoint(x: -nameSize.width / 2, y: -nameSize.height / 2 + stampRadius * 0.06),
+                withAttributes: handAttrs
+            )
+
+            cg.restoreGState()
+        }
+        return data
+    }
+
     private static func escape(_ value: String) -> String {
         value
             .replacingOccurrences(of: "&", with: "&amp;")
@@ -135,8 +220,16 @@ enum TapeLetter {
     }
 }
 
+private extension UIFont {
+    func withTraits(_ traits: UIFontDescriptor.SymbolicTraits) -> UIFont {
+        guard let descriptor = fontDescriptor.withSymbolicTraits(traits) else { return self }
+        return UIFont(descriptor: descriptor, size: pointSize)
+    }
+}
+
 struct MailLetterView: UIViewControllerRepresentable {
     let tape: Tape
+    var addressedTo: String = ""
     @Binding var isPresented: Bool
 
     func makeCoordinator() -> Coordinator {
@@ -148,7 +241,9 @@ struct MailLetterView: UIViewControllerRepresentable {
         mail.mailComposeDelegate = context.coordinator
         mail.setSubject("A tape from Diane")
         mail.setMessageBody(TapeLetter.bodyHTML(for: tape), isHTML: true)
-        if let image = UIImage(named: "LetterFolder"), let data = image.pngData() {
+        if let data = TapeLetter.envelopePNG(addressedTo: addressedTo) {
+            mail.addAttachmentData(data, mimeType: "image/png", fileName: "A tape from Diane.png")
+        } else if let image = UIImage(named: "LetterFolder"), let data = image.pngData() {
             mail.addAttachmentData(data, mimeType: "image/png", fileName: "A tape from Diane.png")
         }
         mail.addAttachmentData(
